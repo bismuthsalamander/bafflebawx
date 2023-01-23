@@ -4,11 +4,12 @@ FROM golang:1.19.5 AS build
 
 WORKDIR /app
 
-COPY playtonicmain.go go.mod go.sum ./
+COPY go.mod go.sum ./
 COPY inceptor ./inceptor
 COPY playtonic ./playtonic
+COPY cmd ./cmd
 
-RUN go build -o /playtonic
+RUN go build -o /playtonic ./cmd/playtonic/main.go
 
 FROM ubuntu:22.04
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+    "fmt"
 	"os"
 
 	"github.com/bismuthsalamander/bafflebawx/playtonic"
@@ -17,5 +17,7 @@ func main() {
 	s, err := playtonic.Server(conf)
 	if err == nil {
 		s.Run(":8080")
-	}
+	} else {
+        fmt.Printf("Error starting server: %v\n", err)
+    }
 }
