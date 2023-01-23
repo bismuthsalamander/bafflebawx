@@ -9,23 +9,21 @@ import (
 	"github.com/bismuthsalamander/bafflebawx/inceptor"
 )
 
-//TODO: collapse SideCount and RollResult into one type?
-
 type DiceCount uint8
 type RollResult int32
-type SideCount uint16
+type DieFace uint16
 type RollDescriptor string
 type Modifier int16
-type ResultRule uint8
+type ResultRule uint8 //this would be an enum in C
 
-const RR_SUM = 0
-const RR_HIGHEST = 1
+const RR_SUM = 0     //result of a roll is the sum of the dice
+const RR_HIGHEST = 1 //result of a roll is the highest die rolled
 
-const SUFFIXES = "^*"
+const SUFFIXES = "^*" //^ means highest die, not sum; * means exploding dice
 
 type RollType struct {
 	numDice       DiceCount
-	numSides      SideCount
+	numSides      DieFace
 	modifier      Modifier
 	resultRule    ResultRule
 	explodingDice bool
@@ -33,19 +31,19 @@ type RollType struct {
 
 type RollOutcome struct {
 	result  RollResult
-	rawDice []RollResult
+	rawDice []DieFace
 }
 
-func (rt RollType) isMaxDie(r RollResult) bool {
-	return r == RollResult(rt.numSides)
+func (rt RollType) isMaxDie(r DieFace) bool {
+	return r == rt.numSides
 }
 
-func dieRoll(sides SideCount) (RollResult, error) {
+func dieRoll(sides DieFace) (DieFace, error) {
 	n, err := inceptor.Uint64()
 	if err != nil {
 		return 0, err
 	}
-	return RollResult((n % uint64(sides)) + 1), nil
+	return DieFace((n % uint64(sides)) + 1), nil
 }
 
 func ParseDescriptor(desc string) (RollType, error) {
@@ -69,10 +67,10 @@ func ParseDescriptor(desc string) (RollType, error) {
 	if len(parts[0]) != 0 {
 		dicecount, err := strconv.ParseUint(parts[0], 10, 64)
 		if err != nil {
-			return rt, fmt.Errorf("could not parse dice count '%s' from descriptor %s", parts[0], desc)
+			return rt, fmt.Errorf("could not parse dice count '%s' (descriptor %s)", parts[0], desc)
 		}
 		if dicecount > math.MaxUint8 || dicecount <= 0 {
-			return rt, fmt.Errorf("dice count %d (max: %d) in descriptor %s", dicecount, math.MaxUint8, desc)
+			return rt, fmt.Errorf("dice count %d out of range [1, %d] (descriptor %s)", dicecount, math.MaxUint8, desc)
 		}
 		rt.numDice = DiceCount(dicecount)
 	}
@@ -81,16 +79,18 @@ func ParseDescriptor(desc string) (RollType, error) {
 		mod_str := parts[1][mod_index:]
 		parts[1] = parts[1][:mod_index]
 		if mod_str != "" {
-			mod_magnitude, err2 := strconv.ParseUint(mod_str[1:], 10, 64)
+			mod, err2 := strconv.ParseInt(mod_str[1:], 10, 64)
 			if err2 != nil {
-				return RollType{}, fmt.Errorf("could not parse modifier magnitude '%s' (from )descriptor %s)", mod_str[1:], desc)
+				return RollType{}, fmt.Errorf("could not parse modifier magnitude '%s' (descriptor %s)", mod_str[1:], desc)
 			}
-			rt.modifier = Modifier(mod_magnitude)
 			if mod_str[0] == '-' {
-				rt.modifier *= -1
+				mod *= -1
 			}
-			if rt.modifier > math.MaxInt16 || rt.modifier < math.MinInt16 {
-				return RollType{}, fmt.Errorf("modifier %d outside of range [%d, %d] (descriptor %s)", rt.modifier, math.MaxInt16, math.MinInt16, desc)
+			//We could also manually compare to MinInt16 and MaxInt16, but this
+			//approach is a little more robust if Modifier later changes type
+			rt.modifier = Modifier(mod)
+			if mod != int64(rt.modifier) {
+				return RollType{}, fmt.Errorf("modifier %s outside of range [%d, %d] (descriptor %s)", mod_str[1:], math.MinInt16, math.MaxInt16, desc)
 			}
 		}
 	}
@@ -101,7 +101,7 @@ func ParseDescriptor(desc string) (RollType, error) {
 	if sides > math.MaxUint16 || sides <= 0 {
 		return RollType{}, fmt.Errorf("side count %d outside of range [1, %d] (descriptor %s)", sides, math.MaxUint16, desc)
 	}
-	rt.numSides = SideCount(sides)
+	rt.numSides = DieFace(sides)
 	return rt, nil
 }
 
@@ -111,7 +111,7 @@ func ExecuteRoll(rt RollType) (RollOutcome, error) {
 	//rawDice with the correct number of slots, but we'd have to either write
 	//two separate versions of the loop or add some ugly logic to check the
 	//slice's size on each iteration.
-	rawDice := make([]RollResult, 0)
+	rawDice := make([]DieFace, 0)
 	for i := 0; DiceCount(i) < rt.numDice; i++ {
 		d, err := dieRoll(rt.numSides)
 		if err != nil {
@@ -119,7 +119,7 @@ func ExecuteRoll(rt RollType) (RollOutcome, error) {
 		}
 		rawDice = append(rawDice, d)
 		if rt.explodingDice && rt.isMaxDie(d) {
-			var extraDie RollResult = RollResult(rt.numSides)
+			extraDie := rt.numSides
 			for rt.isMaxDie(extraDie) {
 				extraDie, err = dieRoll(rt.numSides)
 				if err != nil {
@@ -130,10 +130,10 @@ func ExecuteRoll(rt RollType) (RollOutcome, error) {
 			}
 		}
 		if rt.resultRule == RR_SUM {
-			res += d
+			res += RollResult(d)
 		} else if rt.resultRule == RR_HIGHEST {
-			if d > res {
-				res = d
+			if RollResult(d) > res {
+				res = RollResult(d)
 			}
 		}
 	}

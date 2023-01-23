@@ -15,7 +15,6 @@ func main() {
 	//todo: add configurable port number?
 	conf := playtonic.PlaytonicConfig{inceptorUrl}
 	s, err := playtonic.Server(conf)
-	fmt.Printf("%v %v\n", s, err)
 	if err == nil {
 		s.Run(":8080")
 	}

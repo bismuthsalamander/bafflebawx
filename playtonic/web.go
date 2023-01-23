@@ -21,7 +21,7 @@ type BaseResponse struct {
 
 type DiceResponse struct {
 	BaseResponse
-	RawDice []RollResult `json:"raw_dice"`
+	RawDice []DieFace `json:"raw_dice"`
 }
 
 type RollRequest struct {
@@ -51,12 +51,12 @@ func failure(e error) BaseResponse {
 	return BaseResponse{false, e}
 }
 
-func diceSuccess(r []RollResult) DiceResponse {
+func diceSuccess(r []DieFace) DiceResponse {
 	return DiceResponse{success(), r}
 }
 
 func diceFailure(err error) DiceResponse {
-	return DiceResponse{failure(err), make([]RollResult, 0)}
+	return DiceResponse{failure(err), make([]DieFace, 0)}
 }
 
 func skillCheckError(err error) SkillCheckResponse {
