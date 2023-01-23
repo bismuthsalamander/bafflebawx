@@ -78,6 +78,9 @@ func healthCheck(rootUrl string) error {
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("error parsing response from /health: %v", err)
+	}
 	var m inceptor.HealthResponse
 	err = json.Unmarshal(body, &m)
 	if err != nil {
