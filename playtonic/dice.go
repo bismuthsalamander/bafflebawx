@@ -129,7 +129,6 @@ func ExecuteRoll(rt RollType) (RollOutcome, error) {
 				d += extraDie
 			}
 		}
-		d += RollResult(rt.modifier)
 		if rt.resultRule == RR_SUM {
 			res += d
 		} else if rt.resultRule == RR_HIGHEST {
@@ -138,5 +137,6 @@ func ExecuteRoll(rt RollType) (RollOutcome, error) {
 			}
 		}
 	}
+	res += RollResult(rt.modifier)
 	return RollOutcome{res, rawDice}, nil
 }
