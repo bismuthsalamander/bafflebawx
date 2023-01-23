@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+
+FROM golang:1.19.5 AS build
+
+WORKDIR /app
+
+COPY playtonicmain.go go.mod go.sum ./
+COPY inceptor ./inceptor
+COPY playtonic ./playtonic
+
+RUN go build -o /playtonic
+
+FROM ubuntu:22.04
+
+WORKDIR /
+
+COPY --from=build /playtonic /
+
+EXPOSE 8080
+
+CMD [ "/playtonic" ]

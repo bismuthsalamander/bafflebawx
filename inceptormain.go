@@ -4,6 +4,7 @@ import (
     "fmt"
     "github.com/bismuthsalamander/bafflebawx/inceptor"
 )
+
 func main() {
     n, err := inceptor.Uint64()
     if err != nil {
